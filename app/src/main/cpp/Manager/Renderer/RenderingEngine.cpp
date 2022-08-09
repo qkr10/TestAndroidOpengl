@@ -2,11 +2,11 @@
 // Created by sweetgrape on 2022/08/07.
 //
 
-#include "RendererManager.h"
+#include "RenderingEngine.h"
 
+void RenderingEngine::engine(struct android_app* state) {
+    //https://developer.android.com/reference/games/game-activity/struct/android-app
 
-
-RendererManager::RendererManager(struct android_app* state) {
     struct engine engine{};
 
     memset(&engine, 0, sizeof(engine));
@@ -60,7 +60,7 @@ RendererManager::RendererManager(struct android_app* state) {
     }
 }
 
-int RendererManager::engine_init_display(struct engine *engine) {
+int RenderingEngine::engine_init_display(struct engine *engine) {
     // initialize OpenGL ES and EGL
 
     /*
@@ -149,26 +149,78 @@ int RendererManager::engine_init_display(struct engine *engine) {
     glHint(GL_PERSPECTIVE_CORRECTION_HINT, GL_FASTEST);
     glEnable(GL_CULL_FACE);
     glShadeModel(GL_SMOOTH);
-    glDisable(GL_DEPTH_TEST);
+    glEnable(GL_DEPTH_TEST);
 
     return 0;
 }
 
-void RendererManager::engine_draw_frame(struct engine *engine) {
+void RenderingEngine::engine_draw_frame(struct engine *engine) {
     if (engine->display == nullptr) {
         // No display.
         return;
     }
 
     // Just fill the screen with a color.
-    glClearColor(((float)engine->state.x)/engine->width, engine->state.angle,
-                 ((float)engine->state.y)/engine->height, 1);
-    glClear(GL_COLOR_BUFFER_BIT);
+    glClearColor(((float)engine->state.x)/engine->width,
+                 engine->state.angle,
+                 ((float)engine->state.y)/engine->height,
+                 1);
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+    /* 현재의 매트릭스 모드를 GL_PROJECTION로 설정 */
+    glMatrixMode(GL_PROJECTION);
+    glLoadIdentity();
+    /* 직교 투영으로 좌표계의 범위를 설정한다. */
+    GLfloat ratio = 3;
+    GLfloat right = (GLfloat)engine->width / engine->height * ratio;
+    GLfloat top = ratio;
+    glOrthof(-right, right, -top, top, -10.0f, 10.0f);
+
+    /* 현재의 매트릭스 모드를 GL_MODELVIEW로 설정 */
+    glMatrixMode(GL_MODELVIEW);
+    glLoadIdentity();
+
+    /* 출력될 도형을 위한 좌표 설정 */
+    GLfloat points[] = {
+            -0.5f,-0.5f,-0.5f,    /* 뒤좌하*/
+            -0.5f, 0.5f,-0.5f,    /* 뒤좌상 */
+            0.5f, 0.5f,-0.5f,    /* 뒤우상 */
+            0.5f,-0.5f,-0.5f,    /* 뒤우하 */
+            -0.5f,-0.5f, 0.5f,    /* 앞좌하 */
+            -0.5f, 0.5f, 0.5f,    /* 앞좌상 */
+            0.5f, 0.5f, 0.5f,    /* 앞우상 */
+            0.5f,-0.5f, 0.5f };   /* 앞우하 */
+
+    /* 12개의 삼각형을 위한 정점의 배열 인덱스 */
+    GLubyte indices[] = {
+            0,1,2, 0,2,3,    /* 뒤면 */
+            4,6,5, 4,7,6,    /* 앞면 */
+            0,4,5, 0,5,1,    /* 좌면 */
+            1,5,6, 1,6,2,    /* 윗면 */
+            2,6,7, 2,7,3,    /* 우면 */
+            3,7,4, 3,4,0 };   /* 하면 */
+    /* 정점 배열 사용을 설정 */
+    glEnableClientState(GL_VERTEX_ARRAY);
+
+    /* 그래픽 출력을 위한 정점 배열 사용에 대한 설정 */
+    glRotatef(engine->state.x, 1, 0, 0);
+    glRotatef(engine->state.y, 0, 1, 0);
+    glVertexPointer(3, GL_FLOAT, 0, points);
+
+    glColor4f(((float)engine->state.y)/engine->height,
+              ((float)engine->state.x)/engine->width,
+              engine->state.angle,
+              1);
+    /* 삼각형 12개를 드로잉(6*2) : 처리할 정점의 수 : 36개 */
+    glDrawElements(GL_TRIANGLES, 36, GL_UNSIGNED_BYTE, indices);
+
+    /* 그래픽 출력을 하고 나서 정점 배열 사용에 대한 설정 해제 */
+    glDisableClientState(GL_VERTEX_ARRAY);
 
     eglSwapBuffers(engine->display, engine->surface);
 }
 
-void RendererManager::engine_term_display(struct engine *engine) {
+void RenderingEngine::engine_term_display(struct engine *engine) {
     if (engine->display != EGL_NO_DISPLAY) {
         eglMakeCurrent(engine->display, EGL_NO_SURFACE, EGL_NO_SURFACE, EGL_NO_CONTEXT);
         if (engine->context != EGL_NO_CONTEXT) {
@@ -185,7 +237,7 @@ void RendererManager::engine_term_display(struct engine *engine) {
     engine->surface = EGL_NO_SURFACE;
 }
 
-int32_t RendererManager::engine_handle_input(struct android_app *app, AInputEvent *event) {
+int32_t RenderingEngine::engine_handle_input(struct android_app *app, AInputEvent *event) {
     auto* engine = (struct engine*)app->userData;
     if (AInputEvent_getType(event) == AINPUT_EVENT_TYPE_MOTION) {
         engine->animating = 1;
@@ -196,7 +248,7 @@ int32_t RendererManager::engine_handle_input(struct android_app *app, AInputEven
     return 0;
 }
 
-void RendererManager::engine_handle_cmd(struct android_app *app, int32_t cmd) {
+void RenderingEngine::engine_handle_cmd(struct android_app *app, int32_t cmd) {
     auto* engine = (struct engine*)app->userData;
     switch (cmd) {
         case APP_CMD_SAVE_STATE:
@@ -215,6 +267,10 @@ void RendererManager::engine_handle_cmd(struct android_app *app, int32_t cmd) {
         case APP_CMD_TERM_WINDOW:
             // The window is being hidden or closed, clean it up.
             engine_term_display(engine);
+            break;
+        case APP_CMD_GAINED_FOCUS:
+            break;
+        case APP_CMD_LOST_FOCUS:
             break;
         default:
             break;

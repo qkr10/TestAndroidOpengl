@@ -2,8 +2,8 @@
 // Created by sweetgrape on 2022/08/07.
 //
 
-#ifndef MYAPPLICATION3_RENDERERMANAGER_H
-#define MYAPPLICATION3_RENDERERMANAGER_H
+#ifndef MYAPPLICATION3_RENDERINGENGINE_H
+#define MYAPPLICATION3_RENDERINGENGINE_H
 
 #include <initializer_list>
 #include <memory>
@@ -49,7 +49,7 @@ struct engine {
     struct saved_state state;
 };
 
-class RendererManager {
+class RenderingEngine {
 private:
     static int engine_init_display(struct engine* engine);
     static void engine_draw_frame(struct engine* engine);
@@ -57,8 +57,8 @@ private:
     static int32_t engine_handle_input(struct android_app* app, AInputEvent* event);
     static void engine_handle_cmd(struct android_app* app, int32_t cmd);
 public:
-    RendererManager(struct android_app* state);
+    static void engine(struct android_app* state);
 };
 
 
-#endif //MYAPPLICATION3_RENDERERMANAGER_H
+#endif //MYAPPLICATION3_RENDERINGENGINE_H

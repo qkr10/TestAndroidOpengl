@@ -33,8 +33,8 @@ add_library(native-activity SHARED
         main.cpp
         Manager/Thread/ThreadManager.cpp
         Manager/Thread/ThreadManager.h
-        Manager/Renderer/RendererManager.cpp
-        Manager/Renderer/RendererManager.h
+        Manager/Renderer/RenderingEngine.cpp
+        Manager/Renderer/RenderingEngine.h
         )
 
 target_include_directories(native-activity PRIVATE

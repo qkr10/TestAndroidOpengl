@@ -3,7 +3,7 @@
 //
 
 #include "ThreadManager.h"
-#include "../Renderer/RendererManager.h"
+#include "../Renderer/RenderingEngine.h"
 
 ThreadManager::ThreadManager() {
 }
